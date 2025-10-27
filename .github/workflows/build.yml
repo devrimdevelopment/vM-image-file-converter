@@ -1,0 +1,40 @@
+name: Build OVA Conversion
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Provider to run (fydeos,generic)'
+        required: true
+        default: 'fydeos'
+      target:
+        description: 'Output disk format'
+        required: true
+        default: 'vhdx'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-utils python3 python3-pip
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Run conversion
+        env:
+          OVA_URL: ${{ secrets.OVA_URL }}
+        run: |
+          python -m ova_converter.cli ${{ github.event.inputs.provider }} --target ${{ github.event.inputs.target }} --workdir output
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: converted-${{ github.event.inputs.provider }}-${{ github.event.inputs.target }}
+          path: output/*.${{ github.event.inputs.target }}
